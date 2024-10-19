@@ -1,0 +1,160 @@
+\documentclass[12pt]{article}
+
+\usepackage{sbc-template} 
+\usepackage{graphicx,url}
+\usepackage{url}
+\usepackage[utf8]{inputenc} 
+\usepackage[T1]{fontenc}
+\usepackage[normalem]{ulem}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[square,authoryear]{natbib}
+\usepackage{amssymb} 
+\usepackage{mathalfa} 
+\usepackage{algorithm} 
+\usepackage{algpseudocode} 
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{titlesec}
+\usepackage{mdframed}
+\usepackage{listings}
+
+\usepackage{amsmath} 
+\usepackage{booktabs}
+
+\urlstyle{same}
+
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+\newcommand\Tstrut{\rule{0pt}{2.6ex}} 
+\newcommand\Bstrut{\rule[-0.9ex]{0pt}{0pt}} 
+\newcommand{\scell}[2][c]{\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+\usepackage[nolist,nohyperlinks]{acronym}
+
+
+\usepackage{aurical}
+\usepackage[T1]{fontenc}
+
+\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
+
+\title{Comparative analysis of area-optimal polygonization algorithms}
+
+\author{Dimitrios Papadimas\inst{1}}
+
+
+\address{Department of Informatics and Telecommunications,\\ National \& Kapodistrian University of Athens - NKUA
+	\email{sdi1600126@di.uoa.gr}
+}
+
+\begin{document} 
+	
+	\maketitle
+	
+	\begin{abstract}
+		One of the most famous problems in Computational Geometry is that of the Traveling Salesman Problem. It is the task of finding the most efficient route that visits a given set of points $\mathbfcal{S}$ and returns to the starting point, using the euclidean distance to calculate the distance between each pair of points. The TSP has been given a lot of attention and a great amount of literature has been written about it. However, another interesting geometrical problem is finding the optimal area of the simple polygon created by the given points $\mathbfcal{S}$. Similar to the euclidean TSP, the problem is NP-Complete. Although exact solutions can be found efficiently for small data-sets , in this paper the focus will be on near-optimal solutions and their combinations for a considerable number of points.
+	\end{abstract}
+	
+	\section{Introduction}
+	\label{sec:Introduction}
+
+    The purpose of this paper is to give a better understanding, accompany and expand on the algorithms that were written for the K23 course.
+    
+    The task at hand is finding near-optimal solutions for given sets of points in the plane. As a "solution" for a given set $\mathbfcal{S}$ we will refer to a simple polygon $\mathbfcal{P}$ that has exactly one vertex for each point in the $\mathbfcal{S}$ . Each simple polygon that satisfies the previous condition will be called a "state". The application developed, uses a combination of algorithms each of which creates a state. We can categorize the algorithms as initializing and optimizing. The initializing algorithms take the points from the set $\mathbfcal{S}$ and create the \textit{initial} state. On the other hand, the optimizing algorithms take a polygon/state and create another state ( usually better than before ). 
+
+    To create the initial state we use two really well-known algorithms, the polar coordinate sorting \citep{163408} ( referred as \emph{incremental} ) and the \emph{convex-hull} construction \citep{6004091}. Both of these have different parameters that can be altered in order to achieve a different state. After the initialization of the polygon, we use two newly-emerged algorithms following the 2019 CG:SHOP Challenge \citep{demaine2022area}, the first one being the \emph{local search} \citep{crombez2022greedy} and the other one being \emph{simulated annealing} \citep{goren2022area}. 
+
+    In order to evaluate each solution/polygon, we will use the ratio $\mathbfcal{R(P)}$ \ref{eq:ratio} of the area of the polygon $\mathbfcal{A(P)}$ to the area of the convex hull $\mathbfcal{A(CH)}$.
+    \begin{equation} 
+    \label{eq:ratio}
+    \mathbfcal{R(P))} = \frac{\mathbfcal{A(P))}}{\mathbfcal{A(CH))}}    
+    \end{equation}
+    Depending on the optimization we are aiming for, trying to maximize the area of the polygon (\textbf{max}$\mathbfcal{A}$) or minimizing it (\textbf{min}$\mathbfcal{A}$), the ratio should either tend to $1$ or $0$. In the special case that the value is exactly $1$ or $0$ that means that all the points of the polygon are placed in the Convex Hulls position or the points are aligned.
+ 
+	\section{Initialising Algorithms}
+	\label{sec:initilising_algorithms}
+    \subsection{Incremental}
+
+    The incremental algorithm is an initialising algorithm therefore the input must be a set of points,additionally the points must be sorted. The points can be sorted based on each of their dimension, they can be descending or ascending based on their x-values or y-values. For example, with the set $\{ (1,2) , (-1,3) , (0,0) , (10,4) , (3,4) \} $ the x-ascending list would be $ [(-1,3) ,  (0,0) , (1,2) ,  (3,4), (10,4) ]$. In simple terms, the algorithm will "add" the points to the polygon from left to right.
+\begin{figure}[!htb]
+ \centering
+ \includegraphics[width=0.5\textwidth]{figures/plot_1.png}
+ \caption{Points in the plane}
+ \label{fig:poinys_plane}
+\end{figure}
+    
+    The first step of the algorithm is to initialise the polygon with the first three points and therefore creating a triangle.
+
+\begin{figure}[!htb]
+ \centering
+ \includegraphics[width=0.5\textwidth]{figures/plot_2.png}
+ \caption{Initial triangle}
+ \label{fig:init_triangle}
+\end{figure}
+
+    For each of the points remaining, the algorithm has to insert it into the polygon.For a point to be added to the polygon, we need to check if the point has visible red edges. Each edge of the polygons convex hull $\mathbfcal{CH}$  that is \textbf{visible} from the point will be called red edge (\ref{fig:red_edge}).
+    Then, for each red edge of the convex hull, the corresponding visible edges of the polygon are found and one is selected based on the given criterion (\textbf{min}$\mathbfcal{A}$),(\textbf{max}$\mathbfcal{A}$). These visible edges create triangles with the point. The final selected visible edge is the edge with he minimum-area ( or maximum-area ) triangle that is formed with the point that is to be added.
+    
+    A visible point $p$ from an edge $e$ is defined as a point at which the line segments generated by the midpoint and edges of the edge e do not intersect the polygon at any other point. This process continues until all points in the set have been entered into the polygon.
+
+\begin{figure}
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/plot_3.png} % second figure itself
+        \caption{Red Edges}
+        \label{fig:red_edge}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/plot_4.png} % first figure itself
+        \caption{first figure}
+    \end{minipage}\hfill
+    \begin{minipage}{0.49\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/plot_5.png} % second figure itself
+        \caption{second figure}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/plot_6.png} % second figure itself
+        \caption{third figure}
+    \end{minipage}
+\end{figure}
+
+
+    \subsection{Convex Hull}
+    I need to explain with simple terms how the initializing algorithm \emph{Convex Hull} works. The logic of the algorithm is found in the following three steps. Initially, after reading the data from the file provided as a parameter, the points are placed into a vector. Then, the polygon is initialized as the convex hull of all the points. After that, for each edge of the polygon, the algorithm finds the nearest point and inserts it. It is very important to mention at this point that the point must be visible. Additionally, when the algorithm adds a new point, it creates a new edge, but in the next iteration, this edge is not taken into account. This is done so that the insertion happens around the perimeter of the convex hull. After going through all the edges and inserting as many visible and allowed points as possible, we arrive at a shape similar to the one below. There is a possibility that after the execution, some points remain inside without being included in the polygon. This happens because the point is not visible from any edge of the polygon. These points are called invalid points.
+    
+	
+	
+	\section{Optimising Algorithms}
+	\label{sec:optimising_algorithms}
+    \subsection{Local Search}
+	
+	I need to explain with simple terms how the initializing algorithm \emph{Local Search} works. I will have to give a step-by-step example and some figures thus helping the reader understand in detail the methodology followed.
+
+    \subsection{Simulated Annealing}
+    I need to explain with simple terms how the initializing algorithm \emph{Simulated Annealing} works. I will have to give a step-by-step example and some figures thus helping the reader understand in detail the methodology followed.
+	
+	\section{Experimental evaluation}
+	\label{sec:aval_exp}
+	
+	An experimental evaluation comprises a quantitative or qualitative evaluation of work based on criteria established for comparison. As in any experiment, the reproduction capacity is fundamental for its validity. Therefore, it is important to describe the process of experimentation adopted, present the results properly, with a summary of the main results. Finally, the arenas to the study must be presented, \emph{i.e.}, anything that might take away or limit the validity of the conduction experiment.
+	
+	\section{Conclusion}
+	\label{sec:Conclusion}
+	
+	The conclusion is the finalization of the work and indicates the conclusions obtained as the development of the work, whether positive or negative. In the conclusions, analyze what was desired (defined in the introduction as the objectives), compare with what was achieved by the work, describing how the objectives were reached and why some objective was not reached. I also stand out as contributions to the work, including the benefits and innovations brought about by the work.
+
+The points of the work that merit further study are presented. This enables the creation of new works with studies on the presented points, in the form of a continuity of research carried out by the work. Future works also indicate a maturity of research by the author of the work and these points can be worked on later.
+	
+	\section*{Acknowledgments}
+	I would like to thank God.\footnote{As God I define the all-knowing all-seeing power that rules this world}.
+	
+    \bibliographystyle{apalike}
+    \bibliography{references}
+	
+\end{document}
